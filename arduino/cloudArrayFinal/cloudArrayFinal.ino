@@ -8,7 +8,6 @@ int pulseInput = A0, pulseOutput = A1;
 int lcdShutter = A2;
 int rxLed = 2, txLed = 3;
 
-int delayBeforeStart = 0;
 int delayMultiplier = 1;
 int transmitDelay = 0;
 int stepDelay = 150;
@@ -17,7 +16,6 @@ unsigned long nextStep = millis() + stepDelay;
 int intensity = 20, fadeIn = 0, fadeOut = 4000, probability = 40;
 
 int lcdDelay = 3000;
-unsigned long nextShutter = millis() + lcdDelay;
 boolean lcdShut = false, lcdActive = true;
 
 int burstDuration = 0;
@@ -27,9 +25,10 @@ int autoBurstFrequency = 10000;
 int oldProbability = probability;
 boolean directionalRunning = false;
 
-int id = -1;
+unsigned long nextShutter = millis() + lcdDelay;
+int id = 10;
 
-int program = 4;
+int program = 2;
 #define REST 0
 #define STARS 1
 #define KNIGHTRIDER 2
@@ -85,20 +84,25 @@ void loop() {
 
     byte startByte = Serial.read();
     if (startByte == 255) {
+      
+      // startbyte 255, one value
       byte command, value;
       command = Serial.read();
       value = Serial.read();
       parseIncomingSerial(command, value);
+      
       delay(transmitDelay * delayMultiplier);
       sendData(command, value);
+      
     } else if (startByte == 254) {
-
+      
+      // startbyte 254, two values
       byte command, value1, value2;
       command = Serial.read();
       value1 = Serial.read();
       value2 = Serial.read();
       parseIncomingSerial(command, value1, value2);
-
+      
     } else {
       // doesn't make sense, just pass it along anyways
       digitalWrite(txLed, HIGH);
@@ -164,6 +168,7 @@ void loop() {
 
 void solid() {
   int pwmVal = map(intensity, 0, 100, 0, maxPWM);
+  pwmVal = constrain(pwmVal, 0, maxPWM);
   for (int i = 0; i < amountOfLeds; i++) {
     SoftPWMSet(led[i], pwmVal);
   }
@@ -336,11 +341,6 @@ void parseIncomingSerial(char command, byte value) {
     if (feedback) Serial.print("delayMultiplier set to ");
     if (feedback) Serial.println(byte(value));
   }
-  if (command == 'D') {
-    delayBeforeStart = value;
-    if (feedback) Serial.print("delayBeforeStart set to ");
-    if (feedback) Serial.println(byte(value));
-  }
   if (command == 'P') {
     program = value;
     if (feedback) Serial.println(byte(value));
@@ -349,7 +349,7 @@ void parseIncomingSerial(char command, byte value) {
     stepDelay = value;
   }
   if (command == 's') {
-    stepDelay = map(id, 0, 100, 0, value);
+    stepDelay = map(id, 0, 100, value/10, value);
   }
   if (command == 'V') {
     intensity = constrain(value, 0, 100);
@@ -363,7 +363,7 @@ void parseIncomingSerial(char command, byte value) {
       digitalWrite(lcdShutter, HIGH);
     } else {
       lcdActive = true;
-      lcdDelay = map(value, 1, 249, 0, 6000);
+      lcdDelay = map(value, 1, 249, 0, 16000);
       nextShutter = millis() + lcdDelay;
     }
   }
@@ -405,7 +405,6 @@ void parseIncomingSerial(char command, byte value) {
       autoBurstFrequency = map(value, 1, 250, 1000, 60000);
     }
   }
-
 }
 
 void createBurst() {

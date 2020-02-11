@@ -12,7 +12,7 @@ byte formation = 0b00000111;
 
 unsigned int lastMorph;
 int morphFreq = 40, lastFeedbackSec = -1;
-int counterActionFreq = 10, counterAction = -1, counterLow = 0, counterHigh = 251;
+int counterActionFrequency = 10, counterAction = -1, counterLow = 0, counterHigh = 251;
 int burstChance = -1;
 
 int currentPreset = -1;
@@ -22,7 +22,7 @@ int currentPreset = -1;
 #define FALL 2
 #define DONE 3
 
-int program = 4, lastProgram = -1, amountOfPrograms = 9;
+int program = 2, lastProgram = -1, amountOfPrograms = 14;
 #define REST 0
 #define STARS 1
 #define KNIGHTRIDER 2
@@ -39,7 +39,7 @@ int program = 4, lastProgram = -1, amountOfPrograms = 9;
 #define PROBABILITY 3
 #define LCDFREQUENCY 4
 
-int slowness = 3;
+int slowness = 15;
 boolean morphFeedback = false;
 
 void setup() {
@@ -55,8 +55,8 @@ void setup() {
 
   // random seed and id
   sendData('R', 0);
-  nextProgramChange = 1;
-  preset(7);
+  nextProgramChange = 10;
+  preset(13);
 
 }
 
@@ -72,7 +72,7 @@ void loop() {
       }
       preset(nextPreset);
     }
-    if ((seconds % (counterActionFreq * slowness)) == 0) {
+    if (seconds % counterActionFrequency == 0) {
       doCounterAction();
     }
   }
@@ -84,7 +84,6 @@ void loop() {
   if (burstChance > 0) {
     int ran = random(10000);
     if (ran < burstChance) {
-      //Serial.println("burst!");
       sendData('B', random(30));
     }
   }
@@ -92,7 +91,7 @@ void loop() {
 }
 
 void doCounterAction() {
-  Serial.print("counterAction time");
+  Serial.println("counterAction time");
   formation = ~formation;
   if (counterAction == LCDFREQUENCY) {
     sendData('L', random(counterLow, counterHigh));
@@ -101,8 +100,6 @@ void doCounterAction() {
     sendData('V', random(counterLow, counterHigh));
   }
   formation = ~formation;
-
-  Serial.println();
 }
 
 void rest() {
@@ -131,7 +128,7 @@ void preset(int _preset) {
       newMorph(PROBABILITY, random(100), 0, random(200, 800), true, true);
       formation = 0b00000101;
       nextProgramChange = random(5, 7);
-      counterActionFreq = random(3, 5);
+      counterActionFrequency = random(13, 25);
       counterAction = STEPDELAY;
       counterHigh = 251;
       counterLow = 20;
@@ -213,6 +210,29 @@ void preset(int _preset) {
       formation = 0b00000111;
       sendData('A', 0);
       break;
+    case 10:
+      Serial.println("new counter action frequency");
+      counterActionFrequency = random(0, 200);
+      break;
+    case 11:
+      Serial.println("knight rider relative");
+      programChange(KNIGHTRIDER);
+      sendData('I', 0);
+      sendData('O', 20);
+      sendData('S', 0);
+      sendData('s', 1);
+      break;
+    case 12:
+      Serial.println("fast LCD shutter");
+      sendData('L', random(0, 15));
+      break;
+    case 13:
+      Serial.println("random bits");
+      sendData('I', 1);
+      sendData('O', random(50));
+      sendData('P', 8);
+      sendData('S', random(15));
+      break;
     default:
       break;
 
@@ -269,7 +289,7 @@ void printMorphSettings() {
   Serial.print(" next program change ");
   Serial.print(nextProgramChange * slowness);
   Serial.print(" counterAction frequency ");
-  Serial.println(counterActionFreq * slowness);
+  Serial.println(counterActionFrequency);
 
 }
 
